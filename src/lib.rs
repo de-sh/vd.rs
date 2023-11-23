@@ -133,7 +133,7 @@ impl Car {
     fn update_speed(&mut self) {
         let speed = self.transmission_rpm
             * SPEED_FACTOR
-            * self.hand_brake.effect()
+            * (1.0 - self.hand_brake.effect())
             * (1.0 - self.braking_factor);
         self.instantaneous_speeds.push(speed);
         self.speed = self.smooth_speed();
