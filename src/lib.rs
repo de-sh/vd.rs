@@ -45,20 +45,40 @@ impl Car {
         self.gear = gear;
     }
 
+    pub fn gear(&self) -> &Gear {
+        &self.gear
+    }
+
     pub fn set_accelerator_position(&mut self, position: f64) {
         self.accelerator_position = position;
+    }
+
+    pub fn accelerator_position(&self) -> f64 {
+        self.accelerator_position
     }
 
     pub fn set_clutch_position(&mut self, position: f64) {
         self.clutch_position = position;
     }
 
+    pub fn clutch_position(&self) -> f64 {
+        self.clutch_position
+    }
+
     pub fn set_brake_position(&mut self, position: f64) {
         self.brake_position = position;
     }
 
+    pub fn brake_position(&self) -> f64 {
+        self.brake_position
+    }
+
     pub fn set_handbrake_position(&mut self, position: HandBrake) {
         self.hand_brake = position;
+    }
+
+    pub fn hand_brake(&self) -> &HandBrake {
+        &self.hand_brake
     }
 
     fn transmission_ratio(&self) -> f64 {
@@ -99,6 +119,10 @@ impl Car {
         self.instantaneous_speeds[0] = speed;
 
         self.speed = speed;
+    }
+
+    pub fn speed(&self) -> f64 {
+        self.speed
     }
 }
 
