@@ -155,12 +155,19 @@ impl Car {
     }
 
     fn update_speed(&mut self) {
-        let speed = self.transmission_rpm
-            * SPEED_FACTOR
-            * (1.0 - self.hand_brake.effect())
-            * (1.0 - self.effective_braking);
-        self.instantaneous_speeds.push(speed);
-        self.speed = self.smooth_speed();
+        self.speed = if self.accelerator_position == 0.0
+            && (self.speed < 3.0 || self.effective_braking > 0.75)
+        {
+            0.0
+        } else {
+            let speed = self.transmission_rpm
+                * SPEED_FACTOR
+                * (1.0 - self.hand_brake.effect().unwrap_or_default())
+                * (1.0 - self.effective_braking);
+
+            self.instantaneous_speeds.push(speed);
+            self.smooth_speed()
+        };
     }
 
     pub fn update(&mut self) {
