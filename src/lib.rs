@@ -27,6 +27,16 @@ pub enum HandBrake {
     Full,
 }
 
+impl HandBrake {
+    fn effect(&self) -> f64 {
+        match self {
+            HandBrake::Disengaged => 0.0,
+            HandBrake::Half => 0.75,
+            HandBrake::Full => 1.0,
+        }
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct Car {
     instantaneous_speeds: Vec<f64>,
@@ -117,12 +127,10 @@ impl Car {
     }
 
     fn update_speed(&mut self) {
-        let factor = match &self.hand_brake {
-            HandBrake::Full => 0.0,
-            HandBrake::Half => 0.75,
-            HandBrake::Disengaged => 1.0,
-        };
-        let speed = self.transmission_rpm * SPEED_FACTOR * factor * (1.0 - self.brake_position);
+        let speed = self.transmission_rpm
+            * SPEED_FACTOR
+            * self.hand_brake.effect()
+            * (1.0 - self.braking_factor);
         self.instantaneous_speeds.push(speed);
         self.speed = self.smooth_speed();
     }
