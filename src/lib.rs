@@ -99,7 +99,17 @@ impl Car {
     }
 
     pub fn update_braking(&mut self) {
-        self.instantaneous_braking.push(self.brake_position);
+        let mut braking = self.brake_position;
+
+        // Take into account effect of handbrake
+        if let Some(effect) = self.hand_brake.effect() {
+            braking = effect.max(braking)
+        }
+
+        if braking > 0.1 {
+            self.instantaneous_braking.push(braking);
+        }
+
         self.effective_braking = self.smooth_braking();
     }
 
