@@ -32,7 +32,7 @@ pub struct Car {
     instantaneous_speeds: Vec<f64>,
     speed: f64,
     engine_rpm: u32,
-    wheel_rpm: f64,
+    transmission_rpm: f64,
     gear: Gear,
     accelerator_position: f64,
     brake_position: f64,
@@ -96,11 +96,15 @@ impl Car {
     fn update_rpm(&mut self) {
         let rpm = BASE_RPM + (MAX_RPM - BASE_RPM) * self.accelerator_position;
         self.engine_rpm = rpm as u32;
-        self.wheel_rpm = rpm / self.transmission_ratio();
+        self.transmission_rpm = if self.clutch_position <= 0.5 {
+            rpm / self.transmission_ratio() // above biting point
+        } else {
+            0.0 // Transmission is disconnected
+        };
     }
 
     fn update_instataneous_speed(&mut self) {
-        let speed = self.wheel_rpm * SPEED_FACTOR;
+        let speed = self.transmission_rpm * SPEED_FACTOR;
         self.instantaneous_speeds.push(speed);
     }
 
