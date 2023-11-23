@@ -113,6 +113,10 @@ impl Car {
         };
     }
 
+    pub fn rpm(&self) -> u32 {
+        self.engine_rpm
+    }
+
     fn smooth_speed(&mut self) -> f64 {
         let initial_speed = self.instantaneous_speeds[0];
 
