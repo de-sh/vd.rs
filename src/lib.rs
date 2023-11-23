@@ -29,11 +29,11 @@ pub enum HandBrake {
 }
 
 impl HandBrake {
-    fn effect(&self) -> f64 {
+    fn effect(&self) -> Option<f64> {
         match self {
-            HandBrake::Disengaged => 0.0,
-            HandBrake::Half => 0.75,
-            HandBrake::Full => 1.0,
+            HandBrake::Disengaged => None,
+            HandBrake::Half => Some(0.75),
+            HandBrake::Full => Some(1.0),
         }
     }
 }
