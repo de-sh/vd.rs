@@ -6,6 +6,7 @@ const WHEEL_RADIUS: f64 = 0.4; // in m
 const WHEEL_CIRCUMFERENCE: f64 = 2.0 * PI * WHEEL_RADIUS; // in m
 const SPEED_FACTOR: f64 = WHEEL_CIRCUMFERENCE * 0.006; // RPM to kmph formulation
 const SPEED_ALPHA: f64 = 0.7;
+const BRAKING_ALPHA: f64 = 0.7;
 
 #[derive(Debug, Default)]
 pub enum Gear {
@@ -40,6 +41,9 @@ impl HandBrake {
 #[derive(Debug, Default)]
 pub struct Car {
     instantaneous_speeds: Vec<f64>,
+    instantaneous_braking: Vec<f64>, 
+    /// effective value after brake has been applied
+    effective_braking: f64,
     speed: f64,
     engine_rpm: u32,
     transmission_rpm: f64,
@@ -75,8 +79,28 @@ impl Car {
         self.clutch_position
     }
 
+    pub fn smooth_braking(&mut self) -> f64 {
+        if self.instantaneous_braking.is_empty() {
+            return 0.0;
+        }
+
+        let initial_brake = self.instantaneous_braking[0].max(self.hand_brake.effect());
+
+        let braking = exponential_moving_average(&self.instantaneous_braking, BRAKING_ALPHA);
+        self.instantaneous_braking.resize_with(2, || initial_brake);
+        self.instantaneous_braking.reverse();
+        self.instantaneous_braking[0] = braking;
+
+        braking
+    }
+
     pub fn set_brake_position(&mut self, position: f64) {
         self.brake_position = position;
+    }
+
+    pub fn update_braking(&mut self) {
+        self.instantaneous_braking.push(self.brake_position);
+        self.effective_braking = self.smooth_braking();
     }
 
     pub fn brake_position(&self) -> f64 {
@@ -134,7 +158,7 @@ impl Car {
         let speed = self.transmission_rpm
             * SPEED_FACTOR
             * (1.0 - self.hand_brake.effect())
-            * (1.0 - self.braking_factor);
+            * (1.0 - self.effective_braking);
         self.instantaneous_speeds.push(speed);
         self.speed = self.smooth_speed();
     }
@@ -142,6 +166,7 @@ impl Car {
     pub fn update(&mut self) {
         self.update_rpm();
         self.update_speed();
+        self.update_braking();
     }
 
     pub fn speed(&self) -> f64 {
