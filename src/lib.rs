@@ -103,15 +103,7 @@ impl Car {
         };
     }
 
-    fn update_instataneous_speed(&mut self) {
-        let speed = self.transmission_rpm * SPEED_FACTOR;
-        self.instantaneous_speeds.push(speed);
-    }
-
-    pub fn update(&mut self) {
-        self.update_rpm();
-        self.update_instataneous_speed();
-
+    fn smooth_speed(&mut self) -> f64 {
         let initial_speed = self.instantaneous_speeds[0];
 
         let speed = exponential_moving_average(&self.instantaneous_speeds, SPEED_ALPHA);
@@ -121,8 +113,23 @@ impl Car {
         self.instantaneous_speeds.resize_with(2, || initial_speed);
         self.instantaneous_speeds.reverse();
         self.instantaneous_speeds[0] = speed;
+        speed
+    }
 
-        self.speed = speed;
+    fn update_speed(&mut self) {
+        let factor = match &self.hand_brake {
+            HandBrake::Full => 0.0,
+            HandBrake::Half => 0.75,
+            HandBrake::Disengaged => 1.0,
+        };
+        let speed = self.transmission_rpm * SPEED_FACTOR * factor * (1.0 - self.brake_position);
+        self.instantaneous_speeds.push(speed);
+        self.speed = self.smooth_speed();
+    }
+
+    pub fn update(&mut self) {
+        self.update_rpm();
+        self.update_speed();
     }
 
     pub fn speed(&self) -> f64 {
