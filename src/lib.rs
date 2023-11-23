@@ -5,7 +5,7 @@ const MAX_RPM: f64 = 5000.0;
 const WHEEL_RADIUS: f64 = 0.4; // in m
 const WHEEL_CIRCUMFERENCE: f64 = 2.0 * PI * WHEEL_RADIUS; // in m
 const SPEED_FACTOR: f64 = WHEEL_CIRCUMFERENCE * 0.006; // RPM to kmph formulation
-const SPEED_ALPHA: f64 = 0.7;
+const SPEED_ALPHA: f64 = 0.3;
 const BRAKING_ALPHA: f64 = 0.7;
 
 #[derive(Debug, Default)]
