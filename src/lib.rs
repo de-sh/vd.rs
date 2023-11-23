@@ -65,6 +65,7 @@ impl Car {
 
     pub fn set_accelerator_position(&mut self, position: f64) {
         self.accelerator_position = position;
+        self.brake_position = 0.0;
     }
 
     pub fn accelerator_position(&self) -> f64 {
@@ -96,6 +97,7 @@ impl Car {
 
     pub fn set_brake_position(&mut self, position: f64) {
         self.brake_position = position;
+        self.accelerator_position = 0.0;
     }
 
     pub fn update_braking(&mut self) {
