@@ -165,8 +165,8 @@ impl Car {
 
     pub fn update(&mut self) {
         self.update_rpm();
-        self.update_speed();
         self.update_braking();
+        self.update_speed();
     }
 
     pub fn speed(&self) -> f64 {
