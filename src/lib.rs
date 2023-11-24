@@ -177,10 +177,7 @@ impl Car {
         {
             0.0
         } else {
-            let speed = self.transmission_rpm
-                * SPEED_FACTOR
-                * (1.0 - self.hand_brake.effect().unwrap_or_default())
-                * (1.0 - self.effective_braking);
+            let speed = self.transmission_rpm * SPEED_FACTOR * (1.0 - self.effective_braking);
 
             self.instantaneous_speeds.push(speed);
             self.smooth_speed()
