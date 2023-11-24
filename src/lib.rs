@@ -81,18 +81,13 @@ impl Car {
     }
 
     pub fn smooth_braking(&mut self) -> f64 {
-        if self.instantaneous_braking.is_empty() {
-            return 0.0;
-        }
-
-        let initial_brake = self.instantaneous_braking[0].max(self.hand_brake.effect());
-
-        let braking = exponential_moving_average(&self.instantaneous_braking, BRAKING_ALPHA);
-        self.instantaneous_braking.resize_with(2, || initial_brake);
         self.instantaneous_braking.reverse();
-        self.instantaneous_braking[0] = braking;
+        self.instantaneous_braking.resize_with(2, || 0.0);
+        self.instantaneous_braking =
+            exponential_moving_average(&self.instantaneous_braking, BRAKING_ALPHA);
+        self.instantaneous_braking.reverse();
 
-        braking
+        self.instantaneous_braking[0]
     }
 
     pub fn set_brake_position(&mut self, position: f64) {
@@ -156,14 +151,15 @@ impl Car {
     fn smooth_speed(&mut self) -> f64 {
         let initial_speed = self.instantaneous_speeds[0];
 
-        let speed = exponential_moving_average(&self.instantaneous_speeds, SPEED_ALPHA);
+        let speeds = exponential_moving_average(&self.instantaneous_speeds, SPEED_ALPHA);
+        let speed = speeds.last().unwrap();
 
         // To ensure we are working with only a small window of values. Here that is 2 values,
         // so we also reverse and store the ema value at the start to give us better result with the next round
         self.instantaneous_speeds.resize_with(2, || initial_speed);
         self.instantaneous_speeds.reverse();
-        self.instantaneous_speeds[0] = speed;
-        speed
+        self.instantaneous_speeds[0] = *speed;
+        *speed
     }
 
     fn update_speed(&mut self) {
@@ -196,12 +192,14 @@ impl Car {
 // Consider the vehicle's instantaneous speeds were: [15.2, 60.4]
 // We need to ensure that the instantaneous speeds are a bit more realistic,
 // so we use the exponential moving average(alpha = 0.7): 46.84
-fn exponential_moving_average(instantaneous_values: &[f64], alpha: f64) -> f64 {
+fn exponential_moving_average(instantaneous_values: &[f64], alpha: f64) -> Vec<f64> {
     let mut instantaneous_values = instantaneous_values.iter();
     let mut last_value = *instantaneous_values.next().unwrap();
+    let mut ema = vec![last_value];
     for value in instantaneous_values {
         last_value = alpha * value + (1.0 - alpha) * last_value;
+        ema.push(last_value);
     }
 
-    last_value
+    ema
 }
