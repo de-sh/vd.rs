@@ -8,7 +8,7 @@ const SPEED_FACTOR: f64 = WHEEL_CIRCUMFERENCE * 0.006; // RPM to kmph formulatio
 const SPEED_ALPHA: f64 = 0.3;
 const BRAKING_ALPHA: f64 = 0.7;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub enum Gear {
     #[default]
     Neutral,
@@ -20,7 +20,7 @@ pub enum Gear {
     Reverse,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub enum HandBrake {
     Disengaged,
     Half,
