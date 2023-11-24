@@ -167,6 +167,11 @@ impl Car {
     }
 
     fn update_speed(&mut self) {
+        // Don't change speed much if clutch engaged
+        if self.clutch_position > 0.5 {
+            self.speed = self.speed * (0.97 - self.effective_braking); // decrease speed by a small factor(0.03) anyways to emulate road resistence
+            return;
+        }
         self.speed = if self.accelerator_position == 0.0
             && (self.speed < 3.0 || self.effective_braking > 0.75)
         {
