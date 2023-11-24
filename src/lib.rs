@@ -107,7 +107,11 @@ impl Car {
             self.instantaneous_braking.push(braking);
         }
 
-        self.effective_braking = self.smooth_braking();
+        self.effective_braking = if braking > 0.0 {
+            self.smooth_braking()
+        } else {
+            0.0
+        };
     }
 
     pub fn brake_position(&self) -> f64 {
