@@ -128,13 +128,13 @@ impl Car {
 
     fn transmission_ratio(&self) -> f64 {
         match self.gear {
-            Gear::Reverse => -0.75,
+            Gear::Reverse => -0.10,
             Gear::Neutral => 0.0,
-            Gear::First => 0.75,
-            Gear::Second => 1.25,
-            Gear::Third => 1.75,
-            Gear::Fourth => 2.25,
-            Gear::Fifth => 3.0,
+            Gear::First => 0.30,
+            Gear::Second => 0.50,
+            Gear::Third => 0.80,
+            Gear::Fourth => 1.0,
+            Gear::Fifth => 1.40,
         }
     }
 
@@ -142,7 +142,7 @@ impl Car {
         let rpm = BASE_RPM + (MAX_RPM - BASE_RPM) * self.accelerator_position;
         self.engine_rpm = rpm as u32;
         self.transmission_rpm = if self.clutch_position <= 0.5 {
-            rpm / self.transmission_ratio() // above biting point
+            rpm * self.transmission_ratio() // above biting point
         } else {
             0.0 // Transmission is disconnected
         };
