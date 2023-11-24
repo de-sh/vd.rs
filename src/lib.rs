@@ -1,5 +1,7 @@
 use std::f64::consts::PI;
 
+use serde::Serialize;
+
 const BASE_RPM: f64 = 750.0;
 const MAX_RPM: f64 = 5000.0;
 const WHEEL_RADIUS: f64 = 0.4; // in m
@@ -8,7 +10,7 @@ const SPEED_FACTOR: f64 = WHEEL_CIRCUMFERENCE * 0.006; // RPM to kmph formulatio
 const SPEED_ALPHA: f64 = 0.5;
 const BRAKING_ALPHA: f64 = 0.5;
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Serialize)]
 pub enum Gear {
     #[default]
     Neutral,
@@ -20,7 +22,7 @@ pub enum Gear {
     Reverse,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Serialize)]
 pub enum HandBrake {
     Disengaged,
     Half,
