@@ -41,7 +41,7 @@ impl HandBrake {
 #[derive(Debug, Default)]
 pub struct Car {
     instantaneous_speeds: Vec<f64>,
-    instantaneous_braking: Vec<f64>, 
+    instantaneous_braking: Vec<f64>,
     /// effective value after brake has been applied
     effective_braking: f64,
     speed: f64,
