@@ -110,6 +110,7 @@ impl Car {
         self.effective_braking = if braking > 0.0 {
             self.smooth_braking()
         } else {
+            self.instantaneous_braking = vec![0.0];
             0.0
         };
     }
