@@ -10,7 +10,7 @@ async fn main() {
     let mut distance_travelled = 0.0;
     let mut avg_speed = 0.0;
 
-    let mut car = Car::new(rng.gen_range(0.05..0.1));
+    let mut car = Car::new(rng.gen_range(0.0..1.0));
     car.set_handbrake_position(HandBrake::Disengaged);
     car.set_clutch_position(1.0);
     car.shift_gear(Gear::First);
