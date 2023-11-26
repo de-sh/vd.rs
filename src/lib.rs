@@ -9,6 +9,9 @@ const WHEEL_CIRCUMFERENCE: f64 = 2.0 * PI * WHEEL_RADIUS; // in m
 const SPEED_FACTOR: f64 = WHEEL_CIRCUMFERENCE * 0.006; // RPM to kmph formulation
 const SPEED_ALPHA: f64 = 0.5;
 const BRAKING_ALPHA: f64 = 0.5;
+const MAX_POWER: f64 = 100.0; // kW
+const MAX_TORQUE: f64 = 200.0; // Nm
+const BSFC: f64 = 180.0; // g/kWh
 
 #[derive(Debug, Default, PartialEq, Serialize)]
 pub enum Gear {
@@ -54,9 +57,14 @@ pub struct Car {
     brake_position: f64,
     clutch_position: f64,
     hand_brake: HandBrake,
+    fuel_level: f64,
 }
 
 impl Car {
+    pub fn new(fuel_level: f64) -> Self {
+        Self { fuel_level, ..Default::default() }
+    }
+
     pub fn shift_gear(&mut self, gear: Gear) {
         self.gear = gear;
     }
@@ -142,7 +150,11 @@ impl Car {
     }
 
     fn update_rpm(&mut self) {
-        let rpm = BASE_RPM + (MAX_RPM - BASE_RPM) * self.accelerator_position;
+        let rpm = if self.fuel_level > 0.0 {
+            BASE_RPM + (MAX_RPM - BASE_RPM) * self.accelerator_position
+        } else {
+            0.0
+        };
         self.engine_rpm = rpm as u32;
         self.transmission_rpm = if self.clutch_position <= 0.5 {
             rpm * self.transmission_ratio() // above biting point
@@ -187,14 +199,32 @@ impl Car {
         };
     }
 
+    pub fn speed(&self) -> f64 {
+        self.speed
+    }
+
+    pub fn update_fuel(&mut self) {
+        let power_output = self.engine_rpm as f64 * MAX_TORQUE * (2.0 * PI) / (60.0 * 1000.0);
+        let power_output = power_output.min(MAX_POWER) * 5.0 / self.transmission_ratio();
+        let fuel_consumption = power_output * BSFC;
+        self.fuel_level -= fuel_consumption * 10_f64.powi(-10);
+        self.fuel_level = self.fuel_level.max(0.0);
+    }
+
+    pub fn refuel(&mut self, fuel_level: f64) {
+        self.fuel_level += fuel_level;
+        self.fuel_level %= 1.0; // Max fuel level is 100%, i.e. 1.0
+    }
+
+    pub fn fuel_level(&self) -> f64 {
+        self.fuel_level
+    }
+
     pub fn update(&mut self) {
         self.update_rpm();
         self.update_braking();
         self.update_speed();
-    }
-
-    pub fn speed(&self) -> f64 {
-        self.speed
+        self.update_fuel();
     }
 }
 
