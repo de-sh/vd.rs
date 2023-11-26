@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use rand::Rng;
 use tokio::time::interval;
@@ -6,23 +6,55 @@ use vehicle_dynamics::{Car, Gear, HandBrake};
 
 #[tokio::main]
 async fn main() {
-    let mut car = Car::default();
+    let mut rng = rand::thread_rng();
+    let mut distance_travelled = 0.0;
+    let mut avg_speed = 0.0;
+
+    let mut car = Car::new(rng.gen_range(0.05..0.1));
     car.set_handbrake_position(HandBrake::Disengaged);
     car.set_clutch_position(1.0);
     car.shift_gear(Gear::First);
     car.set_clutch_position(0.5);
     car.set_accelerator_position(0.5);
-    car.update();
-    display(&car);
     car.set_clutch_position(0.0);
 
     let mut interval = interval(Duration::from_secs(1));
-    let mut rng = rand::thread_rng();
+    let mut refuelling = None;
 
     loop {
         car.update();
         display(&car);
+        distance_travelled += car.speed() / 3600.0;
+        avg_speed = (avg_speed + car.speed()) * 0.5;
+        println!("Distance travelled: {}", distance_travelled);
+        println!("Average speed: {}", avg_speed);
         interval.tick().await;
+
+        // Stop for refuelling, slowly get into the gas station
+        if car.fuel_level() < 0.25 && car.speed() != 0.0 {
+            let position = rng.gen_range(0.3..0.7);
+            car.set_clutch_position(position);
+            car.set_brake_position(position);
+            continue;
+        }
+        // Start refuelling
+        if car.fuel_level() < 0.25 && car.speed() == 0.0 && refuelling.is_none() {
+            car.set_handbrake_position(HandBrake::Full);
+            refuelling = Some(
+                // Time during which car is stationary at the refuelling point: between 7.5-17.5 minutes
+                Instant::now() + Duration::from_secs_f32(300.0 + 60.0 * rng.gen_range(2.5..12.5)),
+            );
+        }
+
+        if let Some(till) = refuelling {
+            if till < Instant::now() {
+                refuelling.take();
+                car.set_handbrake_position(HandBrake::Disengaged);
+                continue;
+            }
+            car.refuel(0.001);
+            continue;
+        }
 
         if rng.gen_bool(0.05) && car.rpm() > 2500 || car.rpm() > 3500 || car.rpm() < 1250 {
             shift_gears(&mut car, rng.gen_range(0.25..1.0));
@@ -108,6 +140,7 @@ fn shift_gears(car: &mut Car, clutch_position: f64) {
 fn display(car: &Car) {
     println!("\t----");
     println!("Speed: {}", car.speed());
+    println!("Fuel: {:?}", car.fuel_level() * 40.0);
     println!("Gear: {:?}", car.gear());
     println!("RPM: {}", car.rpm());
     println!("Accelerator: {}", car.accelerator_position());
