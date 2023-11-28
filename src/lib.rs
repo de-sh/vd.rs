@@ -58,6 +58,7 @@ pub struct Car {
     clutch_position: f64,
     hand_brake: HandBrake,
     fuel_level: f64,
+    ignition: bool,
 }
 
 impl Car {
@@ -150,10 +151,10 @@ impl Car {
     }
 
     fn update_rpm(&mut self) {
-        let rpm = if self.fuel_level > 0.0 {
+        let rpm = if self.fuel_level > 0.0 && self.ignition {
             BASE_RPM + (MAX_RPM - BASE_RPM) * self.accelerator_position
         } else {
-            0.0
+            0.0 // Car has no fuel to burn or ignition is off
         };
         self.engine_rpm = rpm as u32;
         self.transmission_rpm = if self.clutch_position <= 0.5 {
@@ -182,8 +183,8 @@ impl Car {
     }
 
     fn update_speed(&mut self) {
-        // Don't change speed much if clutch engaged
-        if self.clutch_position > 0.5 {
+        // Don't change speed much if clutch engaged or ignition turned off
+        if self.clutch_position > 0.5 || !self.ignition {
             self.speed *= 0.97 - self.effective_braking; // decrease speed by a small factor(0.03) anyways to emulate road resistence
             return;
         }
@@ -225,6 +226,14 @@ impl Car {
         self.update_braking();
         self.update_speed();
         self.update_fuel();
+    }
+
+    pub fn turn_key(&mut self, ignition: bool) {
+        self.ignition = ignition;
+    }
+
+    pub fn ignition(&self) -> bool {
+        self.ignition
     }
 }
 
