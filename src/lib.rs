@@ -206,7 +206,8 @@ impl Car {
 
     pub fn update_fuel(&mut self) {
         let power_output = self.engine_rpm as f64 * MAX_TORQUE * (2.0 * PI) / (60.0 * 1000.0);
-        let power_output = power_output.min(MAX_POWER) * 5.0 / self.transmission_ratio();
+        let transmission_ratio = self.transmission_ratio();
+        let power_output = power_output.min(MAX_POWER) * 5.0 / transmission_ratio.max(0.3);
         let fuel_consumption = power_output * BSFC;
         self.fuel_level -= fuel_consumption * 10_f64.powi(-10);
         self.fuel_level = self.fuel_level.max(0.0);
