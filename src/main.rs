@@ -11,6 +11,7 @@ async fn main() {
     let mut avg_speed = 0.0;
 
     let mut car = Car::new(rng.gen_range(0.0..1.0));
+    car.turn_key(true);
     car.set_handbrake_position(HandBrake::Disengaged);
     car.set_clutch_position(1.0);
     car.shift_gear(Gear::First);
@@ -42,7 +43,9 @@ async fn main() {
             car.shift_gear(Gear::Neutral);
             car.set_clutch_position(0.0);
             car.set_brake_position(0.0);
-
+            if rng.gen_bool(0.5) {
+                car.turn_key(false);
+            }
             refuelling = Some(
                 // Time during which car is stationary at the refuelling point: between 7.5-17.5 minutes
                 Instant::now() + Duration::from_secs_f32(300.0 + 60.0 * rng.gen_range(2.5..12.5)),
@@ -52,6 +55,9 @@ async fn main() {
         if let Some(till) = refuelling {
             if till < Instant::now() {
                 refuelling.take();
+                if !car.ignition() {
+                    car.turn_key(true);
+                }
                 car.set_handbrake_position(HandBrake::Disengaged);
                 continue;
             }
