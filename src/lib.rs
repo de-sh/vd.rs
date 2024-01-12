@@ -11,7 +11,6 @@ const SPEED_ALPHA: f64 = 0.5;
 const BRAKING_ALPHA: f64 = 0.5;
 const MAX_POWER: f64 = 100.0; // kW
 const MAX_TORQUE: f64 = 200.0; // Nm
-const BSFC: f64 = 180.0; // g/kWh
 
 #[derive(Debug, Default, PartialEq, Serialize)]
 pub enum Gear {
@@ -50,28 +49,42 @@ pub struct Car {
     /// effective value after brake has been applied
     effective_braking: f64,
     speed: f64,
-    engine_rpm: u32,
+    motor_rpm: u32,
     transmission_rpm: f64,
-    gear: Gear,
     accelerator_position: f64,
     brake_position: f64,
-    clutch_position: f64,
     hand_brake: HandBrake,
-    fuel_level: f64,
+    distance_travelled: f64,
+    energy_consumed: f64,
+    soc: f64,
+    soh: f64,
     ignition: bool,
+    status: String,
 }
 
 impl Car {
-    pub fn new(fuel_level: f64) -> Self {
-        Self { fuel_level, ..Default::default() }
+    pub fn new(soc: f64, soh: f64) -> Self {
+        Self { soc, soh, ..Default::default() }
     }
 
-    pub fn shift_gear(&mut self, gear: Gear) {
-        self.gear = gear;
+    pub fn set_status(&mut self, status: &str) {
+        self.status = status.to_owned();
     }
 
-    pub fn gear(&self) -> &Gear {
-        &self.gear
+    pub fn get_status(&self) -> &str {
+        &self.status
+    }
+
+    pub fn soh(&self) -> f64 {
+        self.soh
+    }
+
+    pub fn distance_travelled(&self) -> f64 {
+        self.distance_travelled
+    }
+
+    pub fn energy_consumed(&self) -> f64 {
+        self.energy_consumed
     }
 
     pub fn set_accelerator_position(&mut self, position: f64) {
@@ -81,14 +94,6 @@ impl Car {
 
     pub fn accelerator_position(&self) -> f64 {
         self.accelerator_position
-    }
-
-    pub fn set_clutch_position(&mut self, position: f64) {
-        self.clutch_position = position;
-    }
-
-    pub fn clutch_position(&self) -> f64 {
-        self.clutch_position
     }
 
     pub fn smooth_braking(&mut self) -> f64 {
@@ -138,34 +143,18 @@ impl Car {
         &self.hand_brake
     }
 
-    fn transmission_ratio(&self) -> f64 {
-        match self.gear {
-            Gear::Reverse => -0.10,
-            Gear::Neutral => 0.0,
-            Gear::First => 0.30,
-            Gear::Second => 0.50,
-            Gear::Third => 0.80,
-            Gear::Fourth => 1.0,
-            Gear::Fifth => 1.40,
-        }
-    }
-
     fn update_rpm(&mut self) {
-        let rpm = if self.fuel_level > 0.0 && self.ignition {
+        let rpm = if self.soc > 0.0 && self.ignition {
             BASE_RPM + (MAX_RPM - BASE_RPM) * self.accelerator_position
         } else {
             0.0 // Car has no fuel to burn or ignition is off
         };
-        self.engine_rpm = rpm as u32;
-        self.transmission_rpm = if self.clutch_position <= 0.5 {
-            rpm * self.transmission_ratio() // above biting point
-        } else {
-            0.0 // Transmission is disconnected
-        };
+        self.motor_rpm = rpm as u32;
+        self.transmission_rpm = rpm;
     }
 
     pub fn rpm(&self) -> u32 {
-        self.engine_rpm
+        self.motor_rpm
     }
 
     fn smooth_speed(&mut self) -> f64 {
@@ -183,8 +172,8 @@ impl Car {
     }
 
     fn update_speed(&mut self) {
-        // Don't change speed much if clutch engaged or ignition turned off
-        if self.clutch_position > 0.5 || !self.ignition {
+        // Don't change speed much if ignition turned off
+        if !self.ignition {
             self.speed *= 0.97 - self.effective_braking; // decrease speed by a small factor(0.03) anyways to emulate road resistence
             return;
         }
@@ -198,38 +187,50 @@ impl Car {
             self.instantaneous_speeds.push(speed);
             self.smooth_speed()
         };
+
+        self.distance_travelled += self.speed / 3600.0;
+
+        // low charge driving affects health
+        if self.soc() < 0.1 {
+            self.soh -= 2.0_f64.powi(-8);
+        }
     }
 
     pub fn speed(&self) -> f64 {
         self.speed
     }
 
-    pub fn update_fuel(&mut self) {
-        let power_output = self.engine_rpm as f64 * MAX_TORQUE * (2.0 * PI) / (60.0 * 1000.0);
-        let transmission_ratio = self.transmission_ratio();
-        let power_output = power_output.min(MAX_POWER) * 5.0 / transmission_ratio.max(0.3);
-        let fuel_consumption = power_output * BSFC;
-        self.fuel_level -= fuel_consumption * 10_f64.powi(-10);
-        self.fuel_level = self.fuel_level.max(0.0);
+    pub fn update_charge(&mut self) {
+        let power_output = self.motor_rpm as f64 * MAX_TORQUE * (2.0 * PI) / (60.0 * 1000.0);
+        let charge_consumption = power_output.min(MAX_POWER) * 5.0 / 3600.0;
+        self.energy_consumed += charge_consumption;
+
+        self.soc -= charge_consumption * 10_f64.powi(-10);
+        self.soc = self.soc.max(0.0);
     }
 
-    pub fn refuel(&mut self, fuel_level: f64) {
-        self.fuel_level += fuel_level;
-        self.fuel_level %= 1.0; // Max fuel level is 100%, i.e. 1.0
+    pub fn charge(&mut self, charge: f64) {
+        // fast charging can also ruin health
+        if charge > 0.02 {
+            self.soh -= 2.0_f64.powi(-8);
+        }
+        self.soc += charge;
+        self.soc %= self.soh; // Max fuel level is only upto SoH
     }
 
-    pub fn fuel_level(&self) -> f64 {
-        self.fuel_level
+    pub fn soc(&self) -> f64 {
+        self.soc
     }
 
     pub fn update(&mut self) {
         self.update_rpm();
         self.update_braking();
         self.update_speed();
-        self.update_fuel();
+        self.update_charge();
     }
 
     pub fn turn_key(&mut self, ignition: bool) {
+        self.status = if ignition { "Running" } else { "Stopped" }.to_owned();
         self.ignition = ignition;
     }
 
